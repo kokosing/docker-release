@@ -1,5 +1,6 @@
 from os import path
 import sys
+import json
 
 from docker.client import Client
 from docker.utils import kwargs_from_env
@@ -83,14 +84,18 @@ def _get_next_tags(tags, repo):
 
 def main():
     try:
-        # docker = _init_docker()
         for docker_image_dir in sys.argv[1:]:
             organization, repository = _get_docker_image_name(docker_image_dir)
             repo = _get_repo(docker_image_dir)
             _check_branch(repo)
             tags = _get_tags(organization, repository)
-            print _get_next_tags(tags, repo)
-
+            version_tag, hash_tag = _get_next_tags(tags, repo)
+            if hash_tag in tags:
+                raise UserMessageException('This version is already released')
+            docker = _init_docker()
+            for line in docker.build(docker_image_dir, hash_tag):
+                print json.loads(line)['stream'][:-1]
+            docker.tag(hash_tag, repository, version_tag)
     except UserMessageException, e:
         print "ERROR: %s" % e
         return 1
