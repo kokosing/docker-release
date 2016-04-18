@@ -1,8 +1,9 @@
 from setuptools import setup, find_packages
 
 requirements = [
-    'GitPython==1.0.1',
-    'docker-py >= 1.7.0'
+    'GitPython == 1.0.1',
+    'docker-py >= 1.7.0',
+    'requests ==2.7.0'
 ]
 
 setup_requirements = [
@@ -17,7 +18,7 @@ setup(
     author_email='g.kokosinski a) gmail.com',
     keywords='docker image release',
     url='https://github.com/kokosing/docker_release',
-    packages=find_packages(exclude=['*tests*']),
+    packages=find_packages(),
     package_dir={'docker_release': 'docker_release'},
     install_requires=requirements,
     setup_requires=setup_requirements,
