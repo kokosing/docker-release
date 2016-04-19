@@ -1,10 +1,12 @@
 from os import path
 import sys
 import json
+import argparse
 
 from docker.client import Client
 from docker.utils import kwargs_from_env
 from git import Repo, InvalidGitRepositoryError
+import pkg_resources
 import requests
 
 
@@ -74,22 +76,31 @@ def _get_tags(organization, repository):
     return tags
 
 
-def _get_next_tags(tags, repo):
+def _get_next_version(tags):
     version = 1
     while version in tags:
         version += 1
 
-    return (version, repo.head.commit.hexsha[:7])
+    return version
 
 
 def main():
+    parser = argparse.ArgumentParser(description='Tool for releasing docker images.')
+    parser.add_argument('--snapshot', '-s', action='store_true',
+                        help="Release a snapshot version (push tags with git sha and updates 'latest')")
+    parser.add_argument('docker_image_dir', metavar='dir', nargs='+',
+                        help='Location of docker image directory with Dockerfile to be released')
+    parser.add_argument('--version', action='version', version=pkg_resources.require("docker-release")[0].version)
+    args = parser.parse_args(sys.argv[1:])
+    print args
     try:
-        for docker_image_dir in sys.argv[1:]:
+        for docker_image_dir in args.docker_image_dir:
             organization, repository = _get_docker_image_name(docker_image_dir)
             repo = _get_repo(docker_image_dir)
-            _check_branch(repo)
+            if not args.snapshot:
+                _check_branch(repo)
             tags = _get_tags(organization, repository)
-            version_tag, hash_tag = _get_next_tags(tags, repo)
+            hash_tag = repo.head.commit.hexsha[:7]
             if hash_tag in tags:
                 raise UserMessageException('This version is already released')
             docker = _init_docker()
@@ -99,7 +110,8 @@ def main():
                 print json.loads(line)['stream'][:-1]
 
             _docker_push(docker, image, hash_tag)
-            _docker_push(docker, image, version_tag)
+            if not args.snapshot:
+                _docker_push(docker, image, _get_next_version(tags))
             _docker_push(docker, image, 'latest')
 
     except UserMessageException, e:
