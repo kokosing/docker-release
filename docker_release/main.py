@@ -93,9 +93,20 @@ def main():
             if hash_tag in tags:
                 raise UserMessageException('This version is already released')
             docker = _init_docker()
-            for line in docker.build(docker_image_dir, hash_tag):
+            image = "%s/%s" % (organization, repository)
+            print "building %s" % image
+            for line in docker.build(docker_image_dir, image):
                 print json.loads(line)['stream'][:-1]
-            docker.tag(hash_tag, repository, version_tag)
+
+            _docker_push(docker, image, hash_tag)
+            _docker_push(docker, image, version_tag)
+            _docker_push(docker, image, 'latest')
+
     except UserMessageException, e:
         print "ERROR: %s" % e
         return 1
+
+
+def _docker_push(docker, image, tag):
+    print "pushing %s:%s" % (image, tag)
+    docker.push(image, tag)
