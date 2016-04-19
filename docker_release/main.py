@@ -129,12 +129,15 @@ def main():
             if args.force == False and hash_tag in tags:
                 raise UserMessageException('This version is already released')
             docker = _init_docker()
-            image = "%s/%s" % (organization, repository)
+            image = '%s/%s' % (organization, repository)
             _docker_build(docker, docker_image_dir, image)
 
             _docker_push(docker, image, hash_tag)
             if not args.snapshot:
-                _docker_push(docker, image, _get_next_version(tags))
+                version = _get_next_version(tags)
+                _docker_push(docker, image, version)
+                repo.git.tag('%s/%s' % (image, version))
+                repo.git.push('--tags')
             _docker_push(docker, image, 'latest')
 
     except UserMessageException, e:
