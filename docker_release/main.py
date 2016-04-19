@@ -112,6 +112,8 @@ def main():
     parser = argparse.ArgumentParser(description='Tool for releasing docker images.')
     parser.add_argument('--snapshot', '-s', action='store_true',
                         help="Release a snapshot version (push tags with git sha and updates 'latest')")
+    parser.add_argument('--force', '-f', action='store_true',
+                        help='Release even if it is already released')
     parser.add_argument('docker_image_dir', metavar='dir', nargs='+',
                         help='Location of docker image directory with Dockerfile to be released')
     parser.add_argument('--version', action='version', version=pkg_resources.require("docker-release")[0].version)
@@ -124,7 +126,7 @@ def main():
                 _check_branch(repo)
             tags = _get_tags(organization, repository)
             hash_tag = repo.head.commit.hexsha[:7]
-            if hash_tag in tags:
+            if args.force == False and hash_tag in tags:
                 raise UserMessageException('This version is already released')
             docker = _init_docker()
             image = "%s/%s" % (organization, repository)
