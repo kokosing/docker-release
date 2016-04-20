@@ -97,7 +97,7 @@ def _docker_push(docker, image, tag):
     images = docker.images(image)
     if len(images) != 1:
         raise UserMessageException('Expected only one image for: %s' % image)
-    docker.tag(images[0]['Id'], image, tag)
+    docker.tag(images[0]['Id'], image[:image.find(':')], tag)
     for line in docker.push(image, tag, stream=True):
         line = json.loads(line)
         if 'error' in line:
@@ -129,7 +129,7 @@ def main():
             if args.force == False and hash_tag in tags:
                 raise UserMessageException('This version is already released')
             docker = _init_docker()
-            image = '%s/%s' % (organization, repository)
+            image = '%s/%s:latest' % (organization, repository)
             _docker_build(docker, docker_image_dir, image)
 
             _docker_push(docker, image, hash_tag)
