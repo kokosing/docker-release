@@ -14,15 +14,15 @@ class UserMessageException(Exception):
     def __init__(self, value):
         self.value = value
 
-    def __str__(self):
-        return repr(self.value)
-
 
 def _get_repo(directory):
     directory = path.abspath(directory)
     while directory is not '/':
         try:
-            return Repo(directory)
+            repo = Repo(directory)
+            if repo.is_dirty():
+                raise UserMessageException('Please commit or stash all the changes')
+            return repo
         except InvalidGitRepositoryError:
             directory = path.dirname(directory)
     raise UserMessageException('To run this command you need to be in git source code directory.')
@@ -141,5 +141,5 @@ def main():
             _docker_push(docker, image, 'latest')
 
     except UserMessageException, e:
-        print "ERROR: %s" % e
+        print "ERROR: %s" % e.value
         return 1
