@@ -92,12 +92,15 @@ def _docker_build(docker, docker_image_dir, image):
         print json.loads(line)['stream'][:-1]
 
 
-def _docker_push(docker, image, tag):
-    print "pushing %s:%s" % (image, tag)
+def _docker_push(docker, args, image, tag):
+    print "tagging %s:%s" % (image, tag)
     images = docker.images(image)
     if len(images) != 1:
         raise UserMessageException('Expected only one image for: %s' % image)
     docker.tag(images[0]['Id'], image[:image.find(':')], tag)
+    if args.build:
+        return
+    print "pushing %s:%s to docker hub" % (image, tag)
     for line in docker.push(image, tag, stream=True):
         line = json.loads(line)
         if 'error' in line:
@@ -111,9 +114,11 @@ def _docker_push(docker, image, tag):
 def main():
     parser = argparse.ArgumentParser(description='Tool for releasing docker images.')
     parser.add_argument('--snapshot', '-s', action='store_true',
-                        help="Release a snapshot version (push tags with git sha and updates 'latest')")
+                        help="Release a snapshot version (push tags with git sha and updates 'latest').")
     parser.add_argument('--force', '-f', action='store_true',
-                        help='Release even if it is already released')
+                        help='Release even if it is already released.')
+    parser.add_argument('--build', '-b', action='store_true',
+                        help='Just build and tag locally. Do not push to docker hub.')
     parser.add_argument('docker_image_dir', metavar='dir', nargs='+',
                         help='Location of docker image directory with Dockerfile to be released')
     parser.add_argument('--version', action='version', version=pkg_resources.require("docker-release")[0].version)
@@ -132,13 +137,13 @@ def main():
             image = '%s/%s:latest' % (organization, repository)
             _docker_build(docker, docker_image_dir, image)
 
-            _docker_push(docker, image, hash_tag)
+            _docker_push(docker, args, image, hash_tag)
             if not args.snapshot:
                 version = _get_next_version(tags)
-                _docker_push(docker, image, version)
+                _docker_push(docker, args, image, version)
                 repo.git.tag('%s/%s' % (image, version))
                 repo.git.push('--tags')
-            _docker_push(docker, image, 'latest')
+            _docker_push(docker, args, image, 'latest')
 
     except UserMessageException, e:
         print "ERROR: %s" % e.value
