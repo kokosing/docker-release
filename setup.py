@@ -12,7 +12,7 @@ setup_requirements = [
 
 setup(
     name='docker-release',
-    version='0.1-SNAPSHOT',
+    version='0.2-SNAPSHOT',
     description='Tool for releasing docker images.',
     author='Grzegorz Kokosinski',
     author_email='g.kokosinski a) gmail.com',
