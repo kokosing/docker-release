@@ -20,8 +20,8 @@ This utility supports:
 
 In order to install docker-release please do the following:
 
-  pip install docker-release
-  
+    pip install docker-release
+
 > Note that usage of virtualenv is recommended.
   
 ## Manual
