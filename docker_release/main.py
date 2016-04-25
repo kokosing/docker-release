@@ -79,17 +79,30 @@ def _get_tags(organization, repository):
 
 
 def _get_next_version(tags):
-    version = 1
-    while version in tags:
-        version += 1
+    max = 0
+    for tag in tags:
+        try:
+            tag = float(tag)
+            if tag > max:
+                max = tag
+        except ValueError:
+            pass
 
-    return version
+    return int(max + 1)
 
 
-def _docker_build(docker, docker_image_dir, image):
+def _docker_build(docker, args, docker_image_dir, image):
     print "Building %s" % image
     for line in docker.build(docker_image_dir, image):
-        print json.loads(line)['stream'][:-1]
+        line = json.loads(line)
+        if 'error' in line:
+            raise UserMessageException('While building image: %s: %s' % (image, line['error']))
+        elif args.verbose and 'stream' in line:
+            print line['stream'][:-1]
+        elif args.verbose and 'status' in line:
+            print line['status'][:-1]
+        elif args.verbose:
+            print line
 
 
 def _docker_push(docker, args, image, tag):
@@ -104,11 +117,13 @@ def _docker_push(docker, args, image, tag):
     for line in docker.push(image, tag, stream=True):
         line = json.loads(line)
         if 'error' in line:
-            raise UserMessageException('While pushing: %s: %s' % (image, line['error']))
-        elif 'id' in line:
+            raise UserMessageException('While pushing image: %s: %s' % (image, line['error']))
+        elif args.verbose and 'id' in line:
             print '%s: %s' % (line['id'], line['status'])
-        elif 'status' in line:
+        elif args.verbose and 'status' in line:
             print line['status']
+        elif args.verbose:
+            print line
 
 
 def main():
@@ -119,6 +134,10 @@ def main():
                         help='Release even if it is already released.')
     parser.add_argument('--build', '-b', action='store_true',
                         help='Just build and tag locally. Do not push to docker hub.')
+    parser.add_argument('--yes', '-y', action='store_true',
+                        help='Accept suggested answers for all the questions. Noninteractive mode.')
+    parser.add_argument('--verbose', '-v', action='store_true',
+                        help='Make ouput more verbose (print output from docker daemon).')
     parser.add_argument('docker_image_dir', metavar='dir', nargs='+',
                         help='Location of docker image directory with Dockerfile to be released')
     parser.add_argument('--version', action='version', version=pkg_resources.require("docker-release")[0].version)
@@ -131,18 +150,25 @@ def main():
                 _check_branch(repo)
             tags = _get_tags(organization, repository)
             hash_tag = repo.head.commit.hexsha[:7]
-            if args.force == False and hash_tag in tags:
-                raise UserMessageException('This version is already released')
+            if not args.force and hash_tag in tags:
+                raise UserMessageException('This version is already released to docker hub')
             docker = _init_docker()
             image = '%s/%s:latest' % (organization, repository)
-            _docker_build(docker, docker_image_dir, image)
+            _docker_build(docker, args, docker_image_dir, image)
 
-            _docker_push(docker, args, image, hash_tag)
             if not args.snapshot:
                 version = _get_next_version(tags)
+                if not args.yes:
+                    user_version = raw_input('What version number would you like to release (%s): ' % version)
+                    if user_version is not '':
+                        version = user_version
+                git_tag = '%s/%s/%s' % (organization, repository, version)
+                if git_tag in repo.tags:
+                    raise UserMessageException('This version is already released, contains a tag in git: %s' % git_tag)
                 _docker_push(docker, args, image, version)
-                repo.git.tag('%s/%s' % (image, version))
+                repo.git.tag(git_tag)
                 repo.git.push('--tags')
+            _docker_push(docker, args, image, hash_tag)
             _docker_push(docker, args, image, 'latest')
 
     except UserMessageException, e:
