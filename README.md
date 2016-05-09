@@ -26,10 +26,10 @@ In order to install docker-release please do the following:
   
 ## Manual
 
-  git clone git@github.com:kokosing/docker-release.git
-  cd docker-release
-  python setup.py build
-  python setup.py install
+    git clone git@github.com:kokosing/docker-release.git
+    cd docker-release
+    python setup.py build
+    python setup.py install
   
 ## Docker image project convention
 
