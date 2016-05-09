@@ -38,7 +38,7 @@ function build() {
 }
 
 function release() {
-  VERSION=$(cat setup.py  | grep version | sed 's/.*0\.\(.*\)-.*/\1/g')
+  VERSION=$(cat setup.py  | grep version= | sed 's/.*0\.\(.*\)-.*/\1/g')
   _change_version 0.$VERSION
   rm -rf dist
   build
