@@ -106,14 +106,15 @@ def _docker_build(docker, args, docker_image_dir, image):
 
 
 def _docker_push(docker, args, image, tag):
-    print "tagging %s:%s" % (image, tag)
+    image_without_tag = image[:image.find(':')]
+    print "tagging %s:%s" % (image_without_tag, tag)
     images = docker.images(image)
     if len(images) != 1:
         raise UserMessageException('Expected only one image for: %s' % image)
-    docker.tag(images[0]['Id'], image[:image.find(':')], tag)
+    docker.tag(images[0]['Id'], image_without_tag, tag)
     if args.build:
         return
-    print "pushing %s:%s to docker hub" % (image, tag)
+    print "pushing %s:%s to docker hub" % (image_without_tag, tag)
     for line in docker.push(image, tag, stream=True):
         line = json.loads(line)
         if 'error' in line:
