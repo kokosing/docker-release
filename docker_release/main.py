@@ -92,6 +92,9 @@ def _get_next_version(tags):
 
 
 def _docker_build(docker, args, docker_image_dir, image):
+    if args.no_build:
+        print "Skipping build for %s" % image
+        return
     print "Building %s" % image
     for line in docker.build(docker_image_dir, image):
         line = json.loads(line)
@@ -112,7 +115,8 @@ def _docker_push(docker, args, image, tag):
     if len(images) != 1:
         raise UserMessageException('Expected only one image for: %s' % image)
     docker.tag(images[0]['Id'], image_without_tag, tag)
-    if args.build:
+    if args.dry_run:
+        print "Skipping push for %s" % image
         return
     print "pushing %s:%s to docker hub" % (image_without_tag, tag)
     for line in docker.push(image, tag, stream=True):
@@ -129,12 +133,14 @@ def _docker_push(docker, args, image, tag):
 
 def main():
     parser = argparse.ArgumentParser(description='Tool for releasing docker images.')
-    parser.add_argument('--snapshot', '-s', action='store_true',
-                        help="Release a snapshot version (push tags with git sha and updates 'latest').")
     parser.add_argument('--force', '-f', action='store_true',
                         help='Release even if it is already released.')
-    parser.add_argument('--build', '-b', action='store_true',
+    parser.add_argument('--dry-run', '-d', action='store_true',
                         help='Just build and tag locally. Do not push to docker hub.')
+    parser.add_argument('--no-build', '-B', action='store_true',
+                        help='Do not build images. Tag and push current :latest')
+    parser.add_argument('--tag-once', '-T', action='store_true',
+                        help='Tag the git repository once with release-<version> rather than per-image')
     parser.add_argument('--yes', '-y', action='store_true',
                         help='Accept suggested answers for all the questions. Noninteractive mode.')
     parser.add_argument('--verbose', '-v', action='store_true',
@@ -142,7 +148,15 @@ def main():
     parser.add_argument('docker_image_dir', metavar='dir', nargs='+',
                         help='Location of docker image directory with Dockerfile to be released')
     parser.add_argument('--version', action='version', version=pkg_resources.require("docker-release")[0].version)
+
+    type_group = parser.add_mutually_exclusive_group()
+    type_group.add_argument('--release', '-r', action='store',
+                        help='The version to release')
+    type_group.add_argument('--snapshot', '-s', action='store_true',
+                        help="Release a snapshot version (push tags with git sha and updates 'latest').")
+
     args = parser.parse_args(sys.argv[1:])
+
     try:
         for docker_image_dir in args.docker_image_dir:
             organization, repository = _get_docker_image_name(docker_image_dir)
@@ -159,16 +173,27 @@ def main():
 
             if not args.snapshot:
                 version = _get_next_version(tags)
-                if not args.yes:
+                if not args.yes and not args.release:
                     user_version = raw_input('What version number would you like to release (%s): ' % version)
                     if user_version is not '':
                         version = user_version
-                git_tag = '%s/%s/%s' % (organization, repository, version)
-                if git_tag in repo.tags:
+                if args.release:
+                    version = args.release
+
+                if args.tag_once:
+                    git_tag = 'release-%s' % (version,)
+                else:
+                    git_tag = '%s/%s/%s' % (organization, repository, version)
+
+                if git_tag in repo.tags and not args.tag_once:
                     raise UserMessageException('This version is already released, contains a tag in git: %s' % git_tag)
+
                 _docker_push(docker, args, image, version)
-                repo.git.tag(git_tag)
-                repo.git.push('--tags')
+
+                if git_tag not in repo.tags:
+                    repo.git.tag(git_tag)
+                    repo.git.push('--tags')
+
             _docker_push(docker, args, image, hash_tag)
             _docker_push(docker, args, image, 'latest')
 
