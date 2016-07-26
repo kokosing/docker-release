@@ -119,16 +119,30 @@ def _docker_push(docker, args, image, tag):
         print "Skipping push for %s" % image
         return
     print "pushing %s:%s to docker hub" % (image_without_tag, tag)
-    for line in docker.push(image, tag, stream=True):
-        line = json.loads(line)
-        if 'error' in line:
-            raise UserMessageException('While pushing image: %s: %s' % (image, line['error']))
-        elif args.verbose and 'id' in line:
-            print '%s: %s' % (line['id'], line['status'])
-        elif args.verbose and 'status' in line:
-            print line['status']
-        elif args.verbose:
-            print line
+    for multiline in docker.push(image, tag, stream=True):
+        """
+        docker push is documented[0] to return a JSON formatted string with one
+        object per line. Sometimes the generator returns multiple lines in one
+        string. Split the string on newlines so that we're feeding the JSON
+        parser one line at a time. Failing to do so results in JSON parsing
+        errors when the parser reaches the start of the next object.
+
+        [0] http://docker-py.readthedocs.io/en/latest/api/#push
+        """
+        for line in multiline.split('\n'):
+            # Skip blank lines, which also trip up the JSON parser.
+            if not line.strip():
+                continue
+
+            line = json.loads(line)
+            if 'error' in line:
+                raise UserMessageException('While pushing image: %s: %s' % (image, line['error']))
+            elif args.verbose and 'id' in line:
+                print '%s: %s' % (line['id'], line['status'])
+            elif args.verbose and 'status' in line:
+                print line['status']
+            elif args.verbose:
+                print line
 
 
 def main():
