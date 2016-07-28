@@ -2,8 +2,7 @@
 
 cd $(dirname $(readlink -f $0))
 
-VIRTUAL_ENV=virtual-env
-COMMANDS="help init build release"
+COMMANDS="help build release"
 SETUP='python setup.py'
 
 function _err() {
@@ -11,28 +10,7 @@ function _err() {
   exit 1
 }
 
-function _activate_virtual_env() {
-  if [ -d $VIRTUAL_ENV ]; then
-    source $VIRTUAL_ENV/bin/activate
-  else
-    _err "Unable to find virtual env at $VIRTUAL_ENV"
-  fi
-}
-
-function init() {
-  sudo apt-get install python-dev 
-  virtualenv $VIRTUAL_ENV
-  source $VIRTUAL_ENV/bin/activate
-  _activate_virtual_env
-  $SETUP develop
-  pip install wheel
-  pip install twine
-  echo 
-  echo "Remember to 'source $VIRTUAL_ENV/bin/activate', before coding"
-}
-
 function build() {
-  _activate_virtual_env
   $SETUP flake8
   $SETUP install
 }
@@ -67,8 +45,8 @@ $0 COMMAND [command arguments]
 
 Commands:
   help  -   display this window
-  init  -   init sandbox (install virtual env and dependencies)
   build -   build the project
+  release - release the project
 EOF
 }
 
