@@ -1,7 +1,12 @@
 language: python
+sudo: false
 python:
-  - "2.6"
   - "2.7"
-install: "python setup.py install"
+install: 
+  -  "pip install pip --upgrade"
+  -  "pip install setuptools --upgrade"
+  -  "pip install flake8"
+  - "python setup.py develop"
 script: 
-  - "python setup.py flake8"
+  - "flake8 docker_release"
+  - "python setup.py install"
