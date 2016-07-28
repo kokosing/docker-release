@@ -1,4 +1,4 @@
-# docker-release [![Build Status](https://travis-ci.org/kokosing/docker-release.svg?branch=master)](https://travis-ci.org/kokosing/docker-release.svg?branch=master)
+# docker-release [![Build Status](https://travis-ci.org/kokosing/docker-release.svg?branch=master)](https://travis-ci.org/kokosing/docker-release)
 
 Tool for releasing docker images. It is useful when your docker image files are under continuous development and you want to have a convenient way to release (publish) them.
 
