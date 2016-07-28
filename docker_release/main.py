@@ -150,10 +150,9 @@ def main():
     parser.add_argument('--version', action='version', version=pkg_resources.require("docker-release")[0].version)
 
     type_group = parser.add_mutually_exclusive_group()
-    type_group.add_argument('--release', '-r', action='store',
-                        help='The version to release')
+    type_group.add_argument('--release', '-r', action='store', help='The version to release')
     type_group.add_argument('--snapshot', '-s', action='store_true',
-                        help="Release a snapshot version (push tags with git sha and updates 'latest').")
+                            help="Release a snapshot version (push tags with git sha and updates 'latest').")
 
     args = parser.parse_args(sys.argv[1:])
 
