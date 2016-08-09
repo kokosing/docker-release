@@ -82,7 +82,13 @@ def _get_next_version(tags):
     max = 0
     for tag in tags:
         try:
+            # Don't treat tags that are short git hashes that happen to be 7
+            # decimal digits as versions.
+            if len(tag) == 7:
+                continue
+
             tag = float(tag)
+
             if tag > max:
                 max = tag
         except ValueError:
