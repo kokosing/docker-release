@@ -65,16 +65,33 @@ def _init_docker():
 
 
 def _get_tags(organization, repository):
-    response = requests.get('https://registry.hub.docker.com/v1/repositories/%s/%s/tags' % (organization, repository))
-    print response
+    #
+    # Documentation eludes us, but this seems to return the complete list of
+    # tags.
+    #
+    # v1 of the Registry API is documented to return all of the tags for a
+    # repository:
+    # https://docs.docker.com/v1.7/reference/api/hub_registry_spec/#tags-registry
+    #
+    # The observed behavior is that it does not:
+    # https://registry.hub.docker.com/v1/repositories/teradatalabs/cdh5-hive/tags
+    # returns a subset of the tags that are shown here:
+    # https://hub.docker.com/r/teradatalabs/cdh5-hive/tags/
+    #
+    # Note that the observed behavior here doesn't appear to conform to the
+    # documented behavior for the v2 Registry API in even the slightest
+    # respect:
+    # https://docs.docker.com/registry/spec/api/#/listing-image-tags
+    #
+    response = requests.get('https://registry.hub.docker.com/v2/repositories/%s/%s/tags/' % (organization, repository))
     if response.status_code == 404:
         return []
     if response.status_code != 200:
         raise UserMessageException('Unable to get tags for: %s/%s' % (organization, repository))
 
-    tags = {}
-    for entry in response.json():
-        tags[entry['name']] = entry['layer']
+    tags = []
+    for tag in response.json()['results']:
+        tags.append(tag['name'])
     return tags
 
 
