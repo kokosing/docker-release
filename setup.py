@@ -25,7 +25,7 @@ This utility supports:
 
 setup(
     name='docker-release',
-    version='0.6-SNAPSHOT',
+    version='0.7-SNAPSHOT',
     description=description,
     author='Grzegorz Kokosinski',
     author_email='g.kokosinski a) gmail.com',
