@@ -207,7 +207,9 @@ def main():
             image = '%s/%s:latest' % (organization, repository)
             _docker_build(docker, args, docker_image_dir, image)
 
+            latest_tag = 'latest-snapshot'
             if not args.snapshot:
+                latest_tag = 'latest'
                 version = _get_next_version(tags)
                 if not args.yes and not args.release:
                     user_version = raw_input('What version number would you like to release (%s): ' % version)
@@ -231,7 +233,7 @@ def main():
                     repo.git.push('--tags')
 
             _docker_push(docker, args, image, hash_tag)
-            _docker_push(docker, args, image, 'latest')
+            _docker_push(docker, args, image, latest_tag)
 
     except UserMessageException, e:
         print "ERROR: %s" % e.value
