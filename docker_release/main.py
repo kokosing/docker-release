@@ -207,9 +207,9 @@ def main():
             image = '%s/%s:latest' % (organization, repository)
             _docker_build(docker, args, docker_image_dir, image)
 
-            latest_tag = 'latest-snapshot'
-            if not args.snapshot:
-                latest_tag = 'latest'
+            if args.snapshot:
+                _docker_push(docker, args, image, hash_tag)
+            else:
                 version = _get_next_version(tags)
                 if not args.yes and not args.release:
                     user_version = raw_input('What version number would you like to release (%s): ' % version)
@@ -227,13 +227,11 @@ def main():
                     raise UserMessageException('This version is already released, contains a tag in git: %s' % git_tag)
 
                 _docker_push(docker, args, image, version)
+                _docker_push(docker, args, image, 'latest')
 
                 if git_tag not in repo.tags:
                     repo.git.tag(git_tag)
                     repo.git.push('--tags')
-
-            _docker_push(docker, args, image, hash_tag)
-            _docker_push(docker, args, image, latest_tag)
 
     except UserMessageException, e:
         print "ERROR: %s" % e.value
