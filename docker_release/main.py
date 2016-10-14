@@ -59,7 +59,8 @@ def _check_labelled(docker, image, repo):
     try:
         label_hash = labels[GIT_HASH]
         if label_hash != sha:
-            raise UserMessageException('Image %s hash mismatch in label %s. Expected %s, found %s' % (image, GIT_HASH, sha, label_hash))
+            raise UserMessageException('Image %s hash mismatch in label %s. Expected %s, found %s' %
+                                       (image, GIT_HASH, sha, label_hash))
     except KeyError as e:
         raise UserMessageException('Image %s missing %s label' % (image, e))
 
