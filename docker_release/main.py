@@ -34,7 +34,9 @@ def _get_current_branch(repo):
 
 def _check_branch(repo):
     if _get_current_branch(repo) != 'master':
-        raise UserMessageException('Please switch to master branch to release the docker image.')
+        answer = raw_input('You are going to release from non master branch, is that intentional? [N/y]: ')
+        if answer is not 'y' or answer is not 'Y':
+            raise UserMessageException('Please switch to master branch to release the docker image.')
 
 
 def _get_docker_image_name(docker_image_dir):
@@ -197,7 +199,7 @@ def main():
         for docker_image_dir in args.docker_image_dir:
             organization, repository = _get_docker_image_name(docker_image_dir)
             repo = _get_repo(docker_image_dir)
-            if not args.snapshot:
+            if not args.yes and not args.snapshot:
                 _check_branch(repo)
             tags = _get_tags(organization, repository)
             hash_tag = repo.head.commit.hexsha[:7]
