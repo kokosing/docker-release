@@ -9,6 +9,8 @@ from git import Repo, InvalidGitRepositoryError
 import pkg_resources
 import requests
 
+GIT_HASH = 'git.hash'
+
 
 class UserMessageException(Exception):
     def __init__(self, value):
@@ -32,6 +34,10 @@ def _get_current_branch(repo):
     return repo.git.rev_parse('--abbrev-ref', 'HEAD')
 
 
+def _get_current_sha(repo):
+    return repo.git.rev_parse('HEAD')
+
+
 def _check_branch(repo):
     if _get_current_branch(repo) != 'master':
         answer = raw_input('You are going to release from non master branch, is that intentional? [N/y]: ')
@@ -46,6 +52,19 @@ def _get_docker_image_name(docker_image_dir):
         raise UserMessageException('Unable to find Dockerfile at location %s' % docker_file_path)
 
     return (path.basename(path.dirname(docker_image_dir)), path.basename(docker_image_dir))
+
+
+def _check_labelled(docker, image, repo):
+    sha = _get_current_sha(repo)
+    inspect = docker.inspect_image(image)
+    labels = inspect['Config']['Labels']
+    try:
+        label_hash = labels[GIT_HASH]
+        if label_hash != sha:
+            raise UserMessageException('Image %s hash mismatch in label %s. Expected %s, found %s' %
+                                       (image, GIT_HASH, sha, label_hash))
+    except KeyError as e:
+        raise UserMessageException('Image %s missing %s label' % (image, e))
 
 
 def _init_docker():
@@ -207,11 +226,12 @@ def main():
                 raise UserMessageException('This version is already released to docker hub')
             docker = _init_docker()
             image = '%s/%s:latest' % (organization, repository)
+            _check_labelled(docker, image, repo)
             _docker_build(docker, args, docker_image_dir, image)
 
-            latest_tag = 'latest-snapshot'
-            if not args.snapshot:
-                latest_tag = 'latest'
+            if args.snapshot:
+                _docker_push(docker, args, image, hash_tag)
+            else:
                 version = _get_next_version(tags)
                 if not args.yes and not args.release:
                     user_version = raw_input('What version number would you like to release (%s): ' % version)
@@ -229,13 +249,11 @@ def main():
                     raise UserMessageException('This version is already released, contains a tag in git: %s' % git_tag)
 
                 _docker_push(docker, args, image, version)
+                _docker_push(docker, args, image, 'latest')
 
                 if git_tag not in repo.tags:
                     repo.git.tag(git_tag)
                     repo.git.push('--tags')
-
-            _docker_push(docker, args, image, hash_tag)
-            _docker_push(docker, args, image, latest_tag)
 
     except UserMessageException, e:
         print "ERROR: %s" % e.value
