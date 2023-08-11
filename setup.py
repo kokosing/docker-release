@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 
 requirements = [
-    'GitPython == 1.0.1',
+    'GitPython == 3.1.32',
     'docker-py >= 1.7.0',
     'requests ==2.20.0'
 ]
